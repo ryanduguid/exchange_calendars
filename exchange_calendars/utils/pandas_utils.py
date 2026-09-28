@@ -115,8 +115,8 @@ def longest_run(ser: pd.Series) -> pd.Index:
     ...     | ((ser >= 30) & (ser <= 40))
     ...     | ((ser >= 55) & (ser < 61))
     ... )
-    >>> longest_run(bv)
-    Index([30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40], dtype='int64')
+    >>> longest_run(bv).to_list()
+    [30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40]
     >>> pd.testing.assert_index_equal(longest_run(bv), ser.index[30:41])
     """
     # group Trues by only adding to sum when value False.
