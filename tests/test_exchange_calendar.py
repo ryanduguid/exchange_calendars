@@ -45,6 +45,34 @@ class FakeCalendar(ExchangeCalendar):
     close_times = ((None, time(11, 49)),)
 
 
+@pytest.mark.parametrize(
+    ("side", "first", "last"),
+    [
+        ("left", "10:00", "12:59"),
+        ("right", "10:01", "13:00"),
+        ("both", "10:00", "13:00"),
+        ("neither", "10:01", "12:59"),
+    ],
+)
+def test_minute_offset_by_sessions_at_calendar_bounds(side, first, last):
+    class BoundaryCalendar(ExchangeCalendar):
+        name = "BOUNDARY"
+        tz = UTC
+        open_times = ((None, time(9)),)
+        close_times = ((None, time(17)),)
+        special_opens_adhoc = [(time(10), pd.DatetimeIndex(["2025-01-06"]))]
+        special_closes_adhoc = [(time(13), pd.DatetimeIndex(["2025-01-08"]))]
+
+    for start, end in [("2025-01-06", "2025-01-08"), ("2025-01-03", "2025-01-09")]:
+        calendar = BoundaryCalendar(start, end, side=side)
+        assert calendar.minute_offset_by_sessions(
+            "2025-01-07 09:30", -1
+        ) == pd.Timestamp(f"2025-01-06 {first}", tz=UTC)
+        assert calendar.minute_offset_by_sessions(
+            "2025-01-07 16:30", 1
+        ) == pd.Timestamp(f"2025-01-08 {last}", tz=UTC)
+
+
 class TestCalendarRegistration:
     @pytest.fixture
     def dispatcher(self) -> abc.Iterator[ExchangeCalendarDispatcher]:
@@ -3527,8 +3555,6 @@ class ExchangeCalendarTestBase:
         # tests for rtrn with different time.
 
         sessions = ans.sessions_next_close_earlier[-5:]
-        if ans.sessions[-2] in sessions:  # guard against offset minute exceeding bound
-            sessions = sessions[sessions != ans.sessions[-2]]
         for session in sessions:
             target_session = ans.get_next_session(session)
             minute = ans.last_minutes[session]
@@ -3547,8 +3573,6 @@ class ExchangeCalendarTestBase:
             assert f(minute, 1) == ans.first_minutes[target_session]
 
         target_sessions = ans.sessions_next_open_earlier[-5:]
-        if ans.sessions[1] in sessions:  # guard against offset minute exceeding bound
-            sessions = sessions[sessions != ans.sessions[1]]
         for target_session in target_sessions:
             session = ans.get_next_session(target_session)  # previous open later
             minute = ans.first_minutes[session]

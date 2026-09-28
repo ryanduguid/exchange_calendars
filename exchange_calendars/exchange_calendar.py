@@ -1958,7 +1958,7 @@ class ExchangeCalendar(ABC):
             raise errors.RequestedMinuteOutOfBounds(self, too_early=True)
         return self.minutes[idx]
 
-    def minute_offset_by_sessions(  # noqa: C901, PLR0912
+    def minute_offset_by_sessions(
         self,
         minute: TradingMinute,
         count: int = 1,
@@ -2008,11 +2008,13 @@ class ExchangeCalendar(ABC):
         minute = minute.tz_localize(UTC)
         minute += pd.Timedelta(days=day_offset)
 
-        if self._minute_oob(minute):
-            if minute.value < self.minutes_nanos[0]:
-                errors.RequestedMinuteOutOfBounds(self, too_early=True)
-            if minute.value > self.minutes_nanos[-1]:
-                raise errors.RequestedMinuteOutOfBounds(self, too_early=False)
+        first_minute, last_minute = self.session_first_last_minute(
+            target_session, _parse=False
+        )
+        if minute < first_minute:
+            return first_minute
+        if minute > last_minute:
+            return last_minute
 
         if self.is_trading_minute(minute, _parse=False) and (
             self.minute_to_session(minute, _parse=False) == target_session
@@ -2022,12 +2024,6 @@ class ExchangeCalendar(ABC):
             # open or close times (i.e. only relevant if base and target sessions have
             # different open/close times.
             return minute
-        first_minute = self.session_first_minute(target_session, _parse=False)
-        if minute < first_minute:
-            return first_minute
-        last_minute = self.session_last_minute(target_session, _parse=False)
-        if minute > last_minute:
-            return last_minute
         if self.is_break_minute(minute, _parse=False):
             return self.session_last_am_minute(target_session, _parse=False)
         raise AssertionError("offset minute should have resolved!")
