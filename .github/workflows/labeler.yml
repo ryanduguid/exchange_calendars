@@ -6,8 +6,25 @@ on:
 jobs:
   pr-labeler:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
     steps:
     - name: Label the PR
-      uses: gerrymanoim/pr-prefix-labeler@v3
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: actions/github-script@v9
+      with:
+        script: |
+          const labels = {
+            API: 'api', BENCH: 'bench', BLD: 'build', BUG: 'bug',
+            DEP: 'deprecation', DEV: 'development', DOC: 'documentation',
+            ENH: 'enhancement', MAINT: 'maintenance', REV: 'revert',
+            STY: 'style', TST: 'test', REL: 'release'
+          };
+          const {title, number} = context.payload.pull_request;
+          const prefix = Object.keys(labels).find(key => title.startsWith(key));
+          if (prefix) {
+            await github.rest.issues.addLabels({
+              ...context.repo,
+              issue_number: number,
+              labels: [labels[prefix]]
+            });
+          }
