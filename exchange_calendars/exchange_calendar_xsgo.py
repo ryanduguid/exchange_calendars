@@ -67,7 +67,7 @@ def national_day_of_indigenous_peoples_observed(
     elif dt.year > 2021:
         dt = summer_solstice(dt)
     else:
-        dt = None
+        return None
     return dt
 
 

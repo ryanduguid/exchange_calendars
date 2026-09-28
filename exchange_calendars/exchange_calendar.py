@@ -19,7 +19,7 @@ import operator
 import warnings
 from abc import ABC, abstractmethod
 from calendar import day_name
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -88,7 +88,7 @@ def selection(
 
 def _group_times(
     sessions: pd.DatetimeIndex,
-    times: Sequence[tuple[pd.Timestamp | None, datetime.time]] | None,
+    times: Sequence[tuple[pd.Timestamp | None, datetime.time | None]] | None,
     tz: ZoneInfo,
     offset: int = 0,
 ) -> pd.DatetimeIndex | None:
@@ -225,6 +225,9 @@ class ExchangeCalendar(ABC):
         parsed (default True). Passed as False:
             - internally to prevent double parsing.
             - by tests for efficiency.
+
+        With False, values must already be parsed pandas Timestamps:
+        dates and sessions are timezone naive; minutes are in UTC.
     """
 
     _LEFT_SIDES = ["left", "both"]
@@ -318,7 +321,7 @@ class ExchangeCalendar(ABC):
             if bound_max is not None and end > bound_max:
                 raise ValueError(self._bound_max_error_msg(end))
 
-        if start >= end:
+        if cast("pd.Timestamp", start) >= cast("pd.Timestamp", end):
             raise ValueError(
                 "`start` must be earlier than `end` although `start` parsed as"
                 f" '{start}' and `end` as '{end}'."
@@ -496,22 +499,30 @@ class ExchangeCalendar(ABC):
     @property
     def break_start_times(
         self,
-    ) -> Sequence[tuple[pd.Timestamp | None, datetime.time]] | None:
+    ) -> Sequence[tuple[pd.Timestamp | None, datetime.time | None]] | None:
         """Local break start time(s).
 
         As `close_times` although times represent the close of the morning
         subsession. None if exchange does not observe a break.
+
+        An entry with a None time marks dates without a break, from that
+        entry's date until the next entry. The corresponding dates in
+        `break_end_times` must also have no break.
         """
         return None
 
     @property
     def break_end_times(
         self,
-    ) -> Sequence[tuple[pd.Timestamp | None, datetime.time]] | None:
+    ) -> Sequence[tuple[pd.Timestamp | None, datetime.time | None]] | None:
         """Local break end time(s).
 
         As `open_times` although times represent the open of the afternoon
         subsession. None if exchange does not observe a break.
+
+        An entry with a None time marks dates without a break, from that
+        entry's date until the next entry. The corresponding dates in
+        `break_start_times` must also have no break.
         """
         return None
 
@@ -595,13 +606,13 @@ class ExchangeCalendar(ABC):
         return None
 
     @property
-    def adhoc_holidays(self) -> list[pd.Timestamp]:
-        """List of non-regular holidays.
+    def adhoc_holidays(self) -> pd.DatetimeIndex | list[pd.Timestamp]:
+        """Non-regular holidays.
 
         Returns
         -------
-        list[pd.Timestamp]
-            List of tz-naive timestamps representing non-regular holidays.
+        pd.DatetimeIndex or list[pd.Timestamp]
+            Timezone-naive timestamps representing non-regular holidays.
         """
         return []
 
@@ -1277,6 +1288,8 @@ class ExchangeCalendar(ABC):
         """
         if _parse:
             date = parse_date(date, "date", self)
+        if TYPE_CHECKING:
+            assert isinstance(date, pd.Timestamp)
         idx = self._get_date_idx(date, _parse=False)
         return bool(self.sessions_nanos[idx] == date.value)  # convert from np.bool_
 
@@ -1337,9 +1350,11 @@ class ExchangeCalendar(ABC):
         """
         if _parse:
             minute = parse_timestamp(minute, "minute", self)
+        if TYPE_CHECKING:
+            assert isinstance(minute, pd.Timestamp)
         return self.minutes_nanos.searchsorted(minute.value, side="left")
 
-    def _minute_oob(self, minute: Minute) -> bool:
+    def _minute_oob(self, minute: pd.Timestamp) -> bool:
         """Is `minute` out-of-bounds."""
         return (
             minute.value < self.minutes_nanos[0]
@@ -1372,6 +1387,8 @@ class ExchangeCalendar(ABC):
         """
         if _parse:
             minute = parse_timestamp(minute, calendar=self)
+        if TYPE_CHECKING:
+            assert isinstance(minute, pd.Timestamp)
         idx = self._get_minute_idx(minute, _parse=False)
         # convert from np.bool_
         return bool(self.minutes_nanos[idx] == minute.value)
@@ -1394,6 +1411,8 @@ class ExchangeCalendar(ABC):
         """
         if _parse:
             minute = parse_timestamp(minute, calendar=self)
+        if TYPE_CHECKING:
+            assert isinstance(minute, pd.Timestamp)
         session_idx = np.searchsorted(self.first_minutes_nanos, minute.value) - 1
         break_start = self.last_am_minutes_nanos[session_idx]
         break_end = self.first_pm_minutes_nanos[session_idx]
@@ -1546,6 +1565,8 @@ class ExchangeCalendar(ABC):
         """
         if _parse:
             minute = parse_timestamp(minute, "minute", self)
+        if TYPE_CHECKING:
+            assert isinstance(minute, pd.Timestamp)
         try:
             idx = next_divider_idx(self.opens_nanos, minute.value)
         except IndexError:
@@ -1576,6 +1597,8 @@ class ExchangeCalendar(ABC):
         """
         if _parse:
             minute = parse_timestamp(minute, "minute", self)
+        if TYPE_CHECKING:
+            assert isinstance(minute, pd.Timestamp)
         try:
             idx = next_divider_idx(self.closes_nanos, minute.value)
         except IndexError:
@@ -1605,6 +1628,8 @@ class ExchangeCalendar(ABC):
         """
         if _parse:
             minute = parse_timestamp(minute, "minute", self)
+        if TYPE_CHECKING:
+            assert isinstance(minute, pd.Timestamp)
         try:
             idx = previous_divider_idx(self.opens_nanos, minute.value)
         except ValueError:
@@ -1635,6 +1660,8 @@ class ExchangeCalendar(ABC):
         """
         if _parse:
             minute = parse_timestamp(minute, "minute", self)
+        if TYPE_CHECKING:
+            assert isinstance(minute, pd.Timestamp)
         try:
             idx = previous_divider_idx(self.closes_nanos, minute.value)
         except ValueError:
@@ -1668,6 +1695,8 @@ class ExchangeCalendar(ABC):
         """
         if _parse:
             minute = parse_timestamp(minute, "minute", self)
+        if TYPE_CHECKING:
+            assert isinstance(minute, pd.Timestamp)
         try:
             idx = next_divider_idx(self.minutes_nanos, minute.value)
         except IndexError:
@@ -1697,6 +1726,8 @@ class ExchangeCalendar(ABC):
         """
         if _parse:
             minute = parse_timestamp(minute, "minute", self)
+        if TYPE_CHECKING:
+            assert isinstance(minute, pd.Timestamp)
         try:
             idx = previous_divider_idx(self.minutes_nanos, minute.value)
         except ValueError:
@@ -1744,6 +1775,8 @@ class ExchangeCalendar(ABC):
         """
         if _parse:
             minute = parse_timestamp(minute, calendar=self)
+        if TYPE_CHECKING:
+            assert isinstance(minute, pd.Timestamp)
 
         if minute.value < self.minutes_nanos[0]:
             # Resolve call here.
@@ -1958,7 +1991,7 @@ class ExchangeCalendar(ABC):
             raise errors.RequestedMinuteOutOfBounds(self, too_early=True)
         return self.minutes[idx]
 
-    def minute_offset_by_sessions(
+    def minute_offset_by_sessions(  # noqa: C901
         self,
         minute: TradingMinute,
         count: int = 1,
@@ -1987,6 +2020,8 @@ class ExchangeCalendar(ABC):
         """
         if _parse:
             minute = parse_trading_minute(self, minute)
+        if TYPE_CHECKING:
+            assert isinstance(minute, pd.Timestamp)
         if not count:
             return minute
 
@@ -2035,6 +2070,9 @@ class ExchangeCalendar(ABC):
         if _parse:
             start = parse_timestamp(start, "start", self)
             end = parse_timestamp(end, "end", self)
+        if TYPE_CHECKING:
+            assert isinstance(start, pd.Timestamp)
+            assert isinstance(end, pd.Timestamp)
         slice_start = self.minutes_nanos.searchsorted(start.value, side="left")
         slice_end = self.minutes_nanos.searchsorted(end.value, side="right")
         return slice(slice_start, slice_end)
@@ -2116,6 +2154,9 @@ class ExchangeCalendar(ABC):
         if _parse:
             start = parse_timestamp(start, "start", self)
             end = parse_timestamp(end, "end", self)
+        if TYPE_CHECKING:
+            assert isinstance(start, pd.Timestamp)
+            assert isinstance(end, pd.Timestamp)
         negate = end < start
         if negate:
             start, end = end, start

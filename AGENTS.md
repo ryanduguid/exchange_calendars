@@ -10,7 +10,7 @@ Identify all available skills in the @.agents\skills directory
 ## LLM context
 
 Add the 'agents' label to any PR that amends:
-- this @AGENT.md
+- this @AGENTS.md
 - any SKILL.md file
 
 ## Project Overview
@@ -31,15 +31,18 @@ See @pyproject.toml for project metadata and dependencies.
 ### Repository Layout
 
 ```
-exchange_calendars_fork/
+exchange_calendars/
 ├── .agents/                                # instructions for LLM coding agents
 │   └── skills/                             # skills for LLM coding agents
 │       ├── dependencies-management/
 │       │   └── SKILL.md
 │       └── update-agents-md/
 │           └── SKILL.md
+├── .claude/
+│   └── settings.json
 ├── .devcontainer/
 │   ├── library-scripts/
+│   │   ├── README.md
 │   │   ├── common-debian.sh
 │   │   ├── node-debian.sh
 │   │   └── python-debian.sh
@@ -68,11 +71,11 @@ exchange_calendars_fork/
 │   │   └── trading_index.ipynb
 │   └── changes_archive.md
 ├── etc/                                    # developer scripts and reference materials
-│   ├── ecal/                               # show holiday calendar in the terminal
-│   ├── lunisolar/
 │   ├── NYSE-Historical-Closings.pdf
 │   ├── bench.py
 │   ├── check_holidays.py
+│   ├── ecal                                # show holiday calendar in the terminal
+│   ├── lunisolar
 │   ├── factory_bounds.py                   # explore bounds of a calendar factory
 │   ├── make_exchange_calendar_test_csv.py  # create a answers .csv file for a calendar
 │   └── update_xkrx_holidays.py
@@ -104,6 +107,7 @@ exchange_calendars_fork/
 ├── tests/
 │   ├── resources/                           # .csv answer files for each calendar
 │   └── test_<code>_calendar.py              # test file for each calendar
+├── .gitattributes
 ├── .pre-commit-config.yaml
 ├── .python-version
 ├── AGENTS.md
@@ -121,7 +125,7 @@ exchange_calendars_fork/
 
 | Category | Tools |
 |---|---|
-| Python | 3.10–3.14 (`.python-version` pins 3.10) |
+| Python | 3.10 to 3.14 (`.python-version` selects Python >=3.10) |
 | Package manager | `uv` |
 | Build backend | `setuptools` + `setuptools_scm` |
 | Testing | `pytest` |
@@ -130,8 +134,8 @@ exchange_calendars_fork/
 | Git hooks | `pre-commit` |
 | Data Manipulation | `pandas`, `numpy` |
 
-The current project version is managed by `setuptools_scm` and written to `src/exchange_calendars/_version.py`.
-IMPORTANT: `src/exchange_calendars/_version.py` is auto-generated and you should not edit it.
+The current project version is managed by `setuptools_scm` and written to `exchange_calendars/_version.py`.
+IMPORTANT: `exchange_calendars/_version.py` is auto-generated and you should not edit it.
 
 ## Development Workflows
 
@@ -139,33 +143,33 @@ IMPORTANT: `src/exchange_calendars/_version.py` is auto-generated and you should
 
 ```bash
 # Install dependencies using uv
-uv sync
+uv sync --locked
 
 # Install pre-commit hooks
-pre-commit install
+uv run --frozen pre-commit install
 ```
 
 ### Testing
 
 - tests are in @tests/.
 - doctests are included to some methods/functions.
-- test with `pytest`.
-- see @pytest.ini for configuration; options are applied automatically via `addopts`.
-- shared fixtures are in @tests/conftest.py.
+- test with `uv run --frozen pytest`.
+- see `[tool.pytest.ini_options]` in @pyproject.toml for configuration; options are applied automatically via `addopts`.
+- shared calendar fixtures and test helpers are in @tests/test_exchange_calendar.py.
 
 Commands to run tests:
 ```bash
-# All tests (including doctests under src/exchange_calendars/)
-pytest
+# All configured tests, including doctests in exchange_calendars/utils/pandas_utils.py
+uv run --frozen pytest
 
 # Tests in specific file
-pytest tests/test_module.py
+uv run --frozen pytest tests/test_xhkg_calendar.py
 
-# Specific test
-pytest tests/test_module.py::test_name
+# Specific test (replace test_name with a method from the calendar test suite)
+uv run --frozen pytest tests/test_xhkg_calendar.py::TestXHKGCalendar::test_name
 
 # With verbose output
-pytest -v
+uv run --frozen pytest -v
 ```
 
 #### Testing Architecture
@@ -181,7 +185,7 @@ Pre-commit runs automatically on `git commit`.
 
 To run manually:
 ```bash
-pre-commit run --all-files
+uv run --frozen pre-commit run --all-files
 ```
 
 ---
@@ -196,7 +200,7 @@ GitHub Actions is used for CI. Defined workflows include:
 
 ### Architecture
 
-Each calendar is defined as a subclass of the common base class `ExchangeCalendar` in @exchange_calendars.exchange_calendar.py.
+Each calendar is defined as a subclass of the common base class `ExchangeCalendar` in @exchange_calendars/exchange_calendar.py.
 
 ### Formatting
 
@@ -219,8 +223,11 @@ ruff format .
 ruff check .
 
 # Type checking
-uv run mypy src/exchange_calendars/
+uv run --frozen mypy exchange_calendars/
 ```
+
+This check uses the settings in @pyproject.toml. Pandas stubs are not installed,
+so pandas-facing annotations are not fully checked.
 
 ### Imports
 
@@ -292,7 +299,7 @@ def my_func(param1: int, param2: str = "default", param3: None | str = None) -> 
 
 1. **NEVER DO RULES**:
     - NEVER schedule a check-in unless specifically asked to.
-    - Never edit the file `src/exchange_calendars/_version.py` - this is auto-generated by the build process.
+    - Never edit the file `exchange_calendars/_version.py` - this is auto-generated by the build process.
 
 2. **Do not assume that the package is coherent or free of bugs**, or that tests or documentation should be treated as gospel. If you come across a contradiction or a conflict or what you believe to be a bug, then say so.
 

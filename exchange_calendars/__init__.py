@@ -53,11 +53,12 @@ with contextlib.suppress(ImportError):
 if __version__ is None:
     try:
         # if package not installed, get version as set when package built
-        from ._version import version
+        from ._version import version as _version
     except Exception:  # noqa: BLE001
         # If package not installed and not built, leave __version__ as None
         pass
     else:
-        __version__ = version
+        __version__ = _version
+        del _version
 
 del version

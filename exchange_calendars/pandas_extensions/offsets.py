@@ -15,7 +15,7 @@ from pandas.tseries.offsets import BaseOffset, CustomBusinessDay
 
 class CompositeCustomBusinessDay(CustomBusinessDay):
     _prefix = "C"
-    _attributes = (
+    _attributes: tuple[str, ...] = (
         "n",
         "normalize",
         "weekmask",
