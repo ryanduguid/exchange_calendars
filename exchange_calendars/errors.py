@@ -25,7 +25,7 @@ if typing.TYPE_CHECKING:
 
 
 class CalendarError(Exception):
-    msg = None
+    msg: str | None = None
 
     def __init__(self, **kwargs):
         self.kwargs = kwargs

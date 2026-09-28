@@ -115,8 +115,8 @@ def longest_run(ser: pd.Series) -> pd.Index:
     ...     | ((ser >= 30) & (ser <= 40))
     ...     | ((ser >= 55) & (ser < 61))
     ... )
-    >>> longest_run(bv)
-    Index([30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40], dtype='int64')
+    >>> longest_run(bv).to_list()
+    [30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40]
     >>> pd.testing.assert_index_equal(longest_run(bv), ser.index[30:41])
     """
     # group Trues by only adding to sum when value False.
@@ -140,11 +140,14 @@ def indexes_union(indexes: list[pd.Index]) -> pd.Index:
     >>> index1 = pd.date_range('2021-05-01 12:20', periods=2, freq='1h')
     >>> index2 = pd.date_range('2021-05-02 17:10', periods=2, freq='22min')
     >>> index3 = pd.date_range('2021-05-03', periods=2, freq='1D')
-    >>> indexes_union([index1, index2, index3])
+    >>> result = indexes_union([index1, index2, index3])
+    >>> result.dtype == index1.dtype
+    True
+    >>> result  # doctest: +ELLIPSIS
     DatetimeIndex(['2021-05-01 12:20:00', '2021-05-01 13:20:00',
                    '2021-05-02 17:10:00', '2021-05-02 17:32:00',
                    '2021-05-03 00:00:00', '2021-05-04 00:00:00'],
-                  dtype='datetime64[us]', freq=None)
+                  dtype='datetime64[...]', freq=None)
     """
     index = indexes[0]
     for indx in indexes[1:]:

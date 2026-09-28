@@ -60,6 +60,7 @@ test_py14 = [
 
 dev = [
     {include-group = "test"},
+    "mypy==2.3.1",
     "pre-commit >=4.3.0",
     # "ruff",  # use local standalone install or ruff extension for editor.
 ]

@@ -15,6 +15,7 @@
 
 
 from datetime import time
+from collections.abc import Sequence
 import functools
 from zoneinfo import ZoneInfo
 
@@ -223,8 +224,8 @@ class XKRXExchangeCalendar(PrecomputedExchangeCalendar):
         self,
         session_labels: pd.DatetimeIndex,
         standard_times: pd.DatetimeIndex | None,
-        offsets: tuple[pd.Timedelta, HolidayCalendar],
-        ad_hoc_offsets: tuple[pd.Timedelta, pd.DatetimeIndex],
+        offsets: Sequence[tuple[pd.Timedelta, HolidayCalendar]],
+        ad_hoc_offsets: Sequence[tuple[pd.Timedelta, pd.DatetimeIndex]],
         start_date: pd.Timestamp,
         end_date: pd.Timestamp,
         strict: bool = False,
@@ -257,19 +258,21 @@ class XKRXExchangeCalendar(PrecomputedExchangeCalendar):
             return pd.Series([], dtype="timedelta64[ns]")
 
         result = pd.concat(merged).sort_index()
-        offsets = result.loc[(result.index >= start_date) & (result.index <= end_date)]
+        special_offsets = result.loc[
+            (result.index >= start_date) & (result.index <= end_date)
+        ]
 
         # Find the array indices corresponding to each special date.
-        indexer = session_labels.get_indexer(offsets.index)
+        indexer = session_labels.get_indexer(special_offsets.index)
 
         # -1 indicates that no corresponding entry was found.  If any -1s are
         # present, then we have special dates that doesn't correspond to any
         # trading day.
         if -1 in indexer and strict:
-            bad_dates = list(offsets.index[indexer == -1])
+            bad_dates = list(special_offsets.index[indexer == -1])
             raise ValueError(f"Special dates {bad_dates} are not trading days.")
 
-        special_opens_or_closes = standard_times[indexer] + offsets
+        special_opens_or_closes = standard_times[indexer] + special_offsets
 
         # Short circuit when nothing to apply.
         if not len(special_opens_or_closes):

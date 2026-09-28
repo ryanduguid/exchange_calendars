@@ -49,7 +49,7 @@ def national_heroes_day_observance(dt: datetime) -> datetime | None:
     elif dt.year >= 2009:
         dt = dt + DateOffset(weekday=MO(3))
     else:
-        dt = None
+        return None
     return dt
 
 
@@ -64,7 +64,7 @@ def queens_birthday_observance(dt: datetime) -> datetime | None:
         # For 2000 to 2008, it is the Monday after the second Saturday in June.
         dt = dt + DateOffset(weekday=SA(2)) + DateOffset(days=2)
     else:
-        dt = None
+        return None
     return dt
 
 

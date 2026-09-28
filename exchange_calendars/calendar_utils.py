@@ -540,7 +540,7 @@ class ExchangeCalendarDispatcher:
         aliases_to_names : Mapping of aliases to canoncial names.
         """
         names = self.get_calendar_names(include_aliases=False)
-        dic = {name: [] for name in names}
+        dic: dict[str, list[str]] = {name: [] for name in names}
         for alias, name in self.aliases_to_names().items():
             dic[name].append(alias)
         return dic

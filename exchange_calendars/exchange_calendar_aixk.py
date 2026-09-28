@@ -21,7 +21,7 @@ from .exchange_calendar import (
 )
 
 
-def weekend_plus_two_days(dt: datetime) -> datetime:
+def weekend_plus_two_days(dt: datetime) -> datetime | None:
     """
     If the holiday falls on a Saturday or Sunday,
     it is observed two days later.

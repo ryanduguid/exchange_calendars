@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import datetime
-from typing import Literal, TYPE_CHECKING
+from typing import Literal, TYPE_CHECKING, TypeAlias
 from zoneinfo import ZoneInfo
 
 import numpy as np
@@ -21,22 +21,22 @@ NP_NAT = pd.NaT.value
 
 # Use Date type where input does not need to represent an actual session
 # and will be parsed by parse_date.
-Date = pd.Timestamp | str | int | float | datetime.datetime | datetime.date
+Date: TypeAlias = pd.Timestamp | str | int | float | datetime.datetime | datetime.date
 
 # Use Session type where input should represent an actual session and will
 # be parsed by parse_session.
-Session = Date
+Session: TypeAlias = Date
 
 # Use Minute type where input does not need to represent an actual trading
 # minute and will be parsed by parse_timestamp.
-Minute = pd.Timestamp | str | int | float | datetime.datetime
+Minute: TypeAlias = pd.Timestamp | str | int | float | datetime.datetime
 
 # Use TradingMinute where input should represent a trading minute and will
 # be parsed by parse_trading_minute.
-TradingMinute = Minute
+TradingMinute: TypeAlias = Minute
 
 
-def next_divider_idx(dividers: np.ndarray, minute_val: int) -> int:
+def next_divider_idx(dividers: np.ndarray, minute_val: int) -> np.intp:
     divider_idx = np.searchsorted(dividers, minute_val, side="right")
     target = dividers[divider_idx]
 
@@ -46,7 +46,7 @@ def next_divider_idx(dividers: np.ndarray, minute_val: int) -> int:
     return divider_idx
 
 
-def previous_divider_idx(dividers: np.ndarray, minute_val: int) -> int:
+def previous_divider_idx(dividers: np.ndarray, minute_val: int) -> np.intp:
     divider_idx = np.searchsorted(dividers, minute_val)
 
     if divider_idx == 0:
@@ -224,13 +224,14 @@ def parse_timestamp(  # noqa: C901, PLR0912
         ts = ts.tz_localize(UTC) if ts.tz is None else ts.tz_convert(UTC)
 
     if ts.second or ts.microsecond or ts.nanosecond:
-        if side is None and calendar is None:
-            raise ValueError(
-                "`side` or `calendar` must be passed if `timestamp` has a"
-                " non-zero second (or more accurate) component. `timestamp`"
-                f" parsed as '{ts}'."
-            )
-        side = side if side is not None else calendar.side
+        if side is None:
+            if calendar is None:
+                raise ValueError(
+                    "`side` or `calendar` must be passed if `timestamp` has a"
+                    " non-zero second (or more accurate) component. `timestamp`"
+                    f" parsed as '{ts}'."
+                )
+            side = calendar.side
         if side == "left":
             ts = ts.floor("min")
         elif side == "right":

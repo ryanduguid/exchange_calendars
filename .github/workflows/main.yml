@@ -38,17 +38,19 @@ jobs:
 
     - if: runner.os != 'Windows'
       name: Set up Python tzdata on Linux and macOS
+      shell: bash
       run: |
         PYTHONTZPATH=$(python -c "import os; print(os.path.dirname(os.__file__))")
-        echo "PYTHONTZPATH=$PYTHONTZPATH" >> $GITHUB_ENV
+        echo "PYTHONTZPATH=$PYTHONTZPATH" >> "$GITHUB_ENV"
     - if: runner.os == 'Windows'
       name: Set up Python tzdata on Windows
+      shell: pwsh
       run: |
         $PYTHONTZPATH = python -c "import os; print(os.path.dirname(os.__file__))"
         echo "PYTHONTZPATH=$PYTHONTZPATH" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
     - name: Test with pytest
-      run: uv run -- pytest tests -n auto --dist loadscope
+      run: uv run --no-sync -- pytest -n auto --dist loadscope
 
     - name: Set up minimum environment and run tests
       shell: bash
@@ -60,5 +62,5 @@ jobs:
         fi
         uv lock --resolution lowest-direct
         uv sync --frozen --resolution lowest-direct --group "$GROUP" --no-dev --no-cache
-        uv run --frozen --resolution lowest-direct --group "$GROUP" -- pytest tests -n auto --dist loadscope
+        uv run --no-sync -- pytest -n auto --dist loadscope
         uv pip list
