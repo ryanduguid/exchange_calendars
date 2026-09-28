@@ -520,31 +520,6 @@ class TestTradingIndex:
     # Helper methods
 
     @staticmethod
-    def could_overlap(
-        ans: Answers,
-        slc: slice,
-        has_break: bool,
-        align: pd.Timedelta,
-        align_pm: pd.Timedelta,
-    ) -> bool:
-        """Query if there's at least one period at which intervals overlap.
-
-        Can right side of last interval of any session/subsession of a
-        slice of Answers fall later than the left side of the first
-        interval of the next session/subsession?
-        """
-        can_overlap = False
-        if has_break:
-            duration = ans.break_starts[slc] - ans.opens[slc].dt.ceil(align)
-            gap = ans.break_ends[slc].dt.ceil(align_pm) - ans.break_starts[slc]
-            can_overlap = (gap < duration).any()
-        if not can_overlap:
-            duration = ans.closes[slc] - ans.opens[slc].dt.ceil(align)
-            gap = ans.opens.shift(-1)[slc].dt.ceil(align) - ans.closes[slc]
-            can_overlap = (gap < duration).any()
-        return can_overlap
-
-    @staticmethod
     def evaluate_overrun(
         starts: pd.Series,
         ends: pd.Series,
@@ -711,13 +686,7 @@ class TestTradingIndex:
 
         max_period = pd.Timedelta(1, "D") - one_min
 
-        params_allow_overlap = closed_right and not (force_break_close and force_close)
-        if params_allow_overlap:
-            can_overlap = self.could_overlap(ans, slc, has_break, align, align_pm)
-        else:
-            can_overlap = False
-
-        if has_break and can_overlap:
+        if closed_right and has_break and not force_break_close:
             # filter out periods that will definitely overlap.
             max_period = (
                 ans.break_ends[slc].dt.ceil(align_pm) - ans.opens[slc].dt.ceil(align)
@@ -741,10 +710,10 @@ class TestTradingIndex:
 
         period = data.draw(self.st_periods(maximum=max_period))
 
-        if can_overlap:
+        if closed_right:
             # assume no overlaps (i.e. reject test parameters if would overlap).
             op = operator.ge if closed == "both" else operator.gt
-            if has_break:
+            if has_break and not force_break_close:
                 mask = ans.break_starts[slc].notna()
                 overrun = self.evaluate_overrun(
                     ans.opens[slc][mask].dt.ceil(align),
@@ -754,11 +723,17 @@ class TestTradingIndex:
                 break_ends_aligned = ans.break_ends[slc].dt.ceil(align_pm)
                 break_duration = (break_ends_aligned - ans.break_starts[slc]).dropna()
                 assume(not op(overrun, break_duration).any())
-            overrun = self.evaluate_overrun(
-                ans.opens[slc].dt.ceil(align), ans.closes[slc], period
-            )
-            sessions_gap = ans.opens[slc].shift(-1).dt.ceil(align) - ans.closes[slc]
-            assume(not op(overrun, sessions_gap).any())
+            if not force_close:
+                overrun = self.evaluate_overrun(
+                    ans.opens[slc].dt.ceil(align), ans.closes[slc], period
+                )
+                sessions_gap = ans.opens[slc].shift(-1).dt.ceil(align) - ans.closes[slc]
+                assume(not op(overrun, sessions_gap).any())
+                if has_break:
+                    pm_overrun = self.evaluate_overrun(
+                        ans.break_ends[slc].dt.ceil(align_pm), ans.closes[slc], period
+                    )
+                    assume(not op(pm_overrun, sessions_gap).any())
 
         ti = m._TradingIndex(  # noqa: SLF001
             cal,
@@ -830,21 +805,17 @@ class TestTradingIndex:
         closed = data.draw(st.sampled_from(["left", "right"]))
         max_period = pd.Timedelta(1, "D") - one_min
 
-        params_allow_overlap = not curtail and not (force_break_close and force_close)
-        if params_allow_overlap:
-            can_overlap = self.could_overlap(ans, slc, has_break, align, align_pm)
-        else:
-            can_overlap = False
-
-        if has_break and can_overlap:
+        if not curtail and has_break and not force_break_close:
             # filter out periods that will definitely overlap.
-            max_period = (ans.break_ends[slc] - ans.opens[slc]).min()
+            max_period = (
+                ans.break_ends[slc].dt.ceil(align_pm) - ans.opens[slc].dt.ceil(align)
+            ).min()
 
         period = data.draw(self.st_periods(maximum=max_period))
 
-        if can_overlap:
+        if not curtail:
             # assume no overlaps
-            if has_break:
+            if has_break and not force_break_close:
                 mask = ans.break_starts[slc].notna()
                 overrun = self.evaluate_overrun(
                     ans.opens[slc][mask].dt.ceil(align),
@@ -854,11 +825,13 @@ class TestTradingIndex:
                 break_ends_aligned = ans.break_ends[slc].dt.ceil(align_pm)
                 break_duration = (break_ends_aligned - ans.break_starts[slc]).dropna()
                 assume(not (overrun > break_duration).any())
-            overrun = self.evaluate_overrun(
-                ans.opens[slc].dt.ceil(align), ans.closes[slc], period
-            )
-            sessions_gap = ans.opens[slc].shift(-1).dt.ceil(align) - ans.closes[slc]
-            assume(not (overrun > sessions_gap).any())
+            if not force_close:
+                starts = ans.opens[slc].dt.ceil(align)
+                if has_break:
+                    starts = ans.break_ends[slc].dt.ceil(align_pm).fillna(starts)
+                overrun = self.evaluate_overrun(starts, ans.closes[slc], period)
+                sessions_gap = ans.opens[slc].shift(-1).dt.ceil(align) - ans.closes[slc]
+                assume(not (overrun > sessions_gap).any())
 
         ti = m._TradingIndex(  # noqa: SLF001
             cal,
@@ -981,30 +954,28 @@ class TestTradingIndex:
 
     # Tests for expected errors.
 
-    @pytest.mark.parametrize("name", ["XHKG", "24/7", "CMES"])
+    @pytest.mark.parametrize("name", ["XHKG", "XTAE", "24/7", "CMES"])
     @given(data=st.data(), closed=st.sampled_from(["right", "both"]))
     @settings(deadline=None, suppress_health_check=[HealthCheck.differing_executors])
     def test_overlap_error_fuzz(self, data, name, calendars, answers, closed, one_min):
-        """Fuzz for expected IndicesOverlapError.
-
-        NB. Test should exclude calendars, such as "XLON", for which
-        indices cannot overlap. These are calendars where a
-        session/subsession duration is less than the subsequent gap
-        between that session/subsession and the next. Passing any slice of
-        the answers for such a calendar to `could_overlap` would return
-        False. That such calendars cannot have overlapping indices is
-        verified by `test_indices_fuzz` and `test_intervals_fuzz` which
-        place no restraints on the period that these calendars can be
-        tested against (at least between 0 minutes and 1 day exclusive).
-        """
+        """Fuzz for expected IndicesOverlapError."""
         cal, ans = calendars[name], answers[name]
-        start, end = data.draw(self.st_start_end(ans))
+        if name == "XTAE":
+            # Target short open-to-open gaps; other ranges rarely overlap.
+            open_gaps = ans.opens.shift(-1) - ans.opens
+            starts = ans.sessions[open_gaps < ONE_DAY - one_min]
+            start = data.draw(st.sampled_from(starts.to_list()))
+            end = ans.get_next_session(start)
+        else:
+            start, end = data.draw(self.st_start_end(ans))
         slc = ans.sessions.slice_indexer(start, end)
         has_break = ans.break_starts[slc].notna().any()
 
         # filter out periods that will definitely not cause an overlap.
         if has_break:
             min_period = (ans.break_ends[slc] - ans.break_starts[slc]).min()
+        elif name == "XTAE":
+            min_period = ans.opens[end] - ans.opens[start] + one_min
         else:
             min_period = (ans.opens.shift(-1)[slc] - ans.closes[slc]).min()
 
@@ -1043,6 +1014,18 @@ class TestTradingIndex:
         if closed == "right":
             with pytest.raises(errors.IntervalsOverlapError):
                 ti.trading_index_intervals()
+
+    def test_intervals_overlap_before_next_open(self, calendars):
+        with pytest.raises(errors.IntervalsOverlapError):
+            calendars["XTAE"].trading_index(
+                "2025-04-01",
+                "2026-04-01",
+                "23h1min",
+                closed="left",
+                force_close=False,
+                force_break_close=False,
+                curtail_overlaps=False,
+            )
 
     @pytest.fixture(params=[True, False])
     def curtail_all(self, request) -> abc.Iterator[bool]:
