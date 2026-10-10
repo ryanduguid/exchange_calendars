@@ -14,7 +14,7 @@ jobs:
     steps:
     - uses: actions/checkout@v7
     - name: Install uv
-      uses: astral-sh/setup-uv@v10.0.1
+      uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
     - name: Install Python
       run: uv python install
     - name: Install the project
@@ -27,7 +27,7 @@ jobs:
         path: ./cache
         key: ${{ runner.os }}-benchmark
     - name: Store benchmark result
-      uses: rhysd/github-action-benchmark@v1
+      uses: rhysd/github-action-benchmark@4322e5726e6334590d251fc4f92bec0efafc45dc # v1
       with:
         tool: 'pytest'
         output-file-path: output.json
