@@ -9,7 +9,7 @@
 
 A Python library for defining and querying calendars for security exchanges.
 
-Calendars for more than [50 exchanges](#Calendars) available out-the-box! If you still can't find the calendar you're looking for, [create a new one](#How-can-I-create-a-new-calendar)!
+Calendars for more than [50 exchanges](#calendars) available out-the-box! If you still can't find the calendar you're looking for, [create a new one](#how-can-i-create-a-new-calendar)!
 
 ## Installation
 
@@ -113,8 +113,8 @@ Timestamp('2022-01-03 07:59:00+0000', tz='UTC')
 Check out the [minutes tutorial](docs/tutorials/minutes.ipynb) for a deeper dive that includes an explanation of the concept of 'minutes' and how the "side" option determines which minutes are treated as trading minutes.
 
 ## Tutorials
-* [sessions.ipynb](docs/tutorials/sessions.ipynb) - all things [sessions](#Working-with-sessions).
-* [minutes.ipynb](docs/tutorials/minutes.ipynb) - all things [minutes](#Working-with-minutes). Don't miss this one!
+* [sessions.ipynb](docs/tutorials/sessions.ipynb) - all things [sessions](#working-with-sessions).
+* [minutes.ipynb](docs/tutorials/minutes.ipynb) - all things [minutes](#working-with-minutes). Don't miss this one!
 * [calendar_properties.ipynb](docs/tutorials/calendar_properties.ipynb) - calendar constrution and a walk through the schedule and all other calendar properties.
 * [calendar_methods.ipynb](docs/tutorials/calendar_methods.ipynb) - a walk through all the methods available to interrogate a calendar.
 * [trading_index.ipynb](docs/tutorials/trading_index.ipynb) - a method that warrants a tutorial all of its own.
@@ -180,7 +180,7 @@ ecal XNYS 1 2020
 
 ### **How can I create a new calendar?**
 
-First off, make sure the calendar you're after hasn't already been defined; exchange calendars comes with over [50 pre-defined calendars](#Calendars), including major security exchanges.
+First off, make sure the calendar you're after hasn't already been defined; exchange calendars comes with over [50 pre-defined calendars](#calendars), including major security exchanges.
 
 If you can't find what you're after, a custom calendar can be created as a subclass of [ExchangeCalendar](exchange_calendars/exchange_calendar.py). [This workflow](.github/pull_request_template.md) describes the process to add a new calendar to `exchange_calendars`. Just follow the relevant parts.
 
