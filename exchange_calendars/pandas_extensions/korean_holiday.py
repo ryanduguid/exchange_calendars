@@ -17,7 +17,10 @@ def is_naive(dt):
 
 class KoreanHoliday(Holiday):
     _timezone = ZoneInfo("Asia/Seoul")
-    _local_timezone = datetime.datetime.now().astimezone().tzinfo
+
+    @staticmethod
+    def _local_timezone():
+        return datetime.datetime.now().astimezone().tzinfo
 
     _computed_holidays = pd.Series([], index=pd.DatetimeIndex([]), dtype=object)
     _alternate_holidays_cache = pd.Series(
@@ -41,7 +44,7 @@ class KoreanHoliday(Holiday):
 def to_korean_datetime(dt):
     dt = pd.to_datetime(dt)
     if dt.tz is None:
-        dt = dt.tz_localize(KoreanHoliday._local_timezone)
+        dt = dt.tz_localize(KoreanHoliday._local_timezone())
     return dt.tz_convert(KoreanHoliday._timezone)
 
 
