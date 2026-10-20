@@ -2,10 +2,10 @@
 
 **Fork status**
 
-[![Fork code quality](https://app.codacy.com/project/badge/Grade/3e514f4b23434ffe83dab3d5ef2b4df4?branch=master)](https://app.codacy.com/gh/ryanduguid/exchange_calendars/dashboard)
-[![Fork CI](https://github.com/ryanduguid/exchange_calendars/actions/workflows/main.yml/badge.svg?branch=master)](https://github.com/ryanduguid/exchange_calendars/actions/workflows/main.yml)
+[![Fork code quality](https://img.shields.io/codacy/grade/3e514f4b23434ffe83dab3d5ef2b4df4/master?style=flat&labelColor=000000)](https://app.codacy.com/gh/ryanduguid/exchange_calendars/dashboard)
+[![Fork CI](https://img.shields.io/github/actions/workflow/status/ryanduguid/exchange_calendars/main.yml?branch=master&label=CI&style=flat&labelColor=000000)](https://github.com/ryanduguid/exchange_calendars/actions/workflows/main.yml)
 
-[![PyPI](https://img.shields.io/pypi/v/exchange-calendars)](https://pypi.org/project/exchange-calendars/) ![Python Support](https://img.shields.io/pypi/pyversions/exchange_calendars) ![PyPI Downloads](https://img.shields.io/pypi/dd/exchange-calendars) [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-D7FF64.svg)](https://github.com/astral-sh/ruff) [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/gerrymanoim/exchange_calendars/master.svg)](https://results.pre-commit.ci/latest/github/gerrymanoim/exchange_calendars/master)
+[![PyPI](https://img.shields.io/pypi/v/exchange-calendars?style=flat&labelColor=000000&color=66023C)](https://pypi.org/project/exchange-calendars/) ![Python Support](https://img.shields.io/pypi/pyversions/exchange_calendars?style=flat&labelColor=000000&color=66023C) ![PyPI Downloads](https://img.shields.io/pypi/dd/exchange-calendars?style=flat&labelColor=000000&color=66023C) [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-D7FF64.svg?style=flat&labelColor=000000&color=66023C)](https://github.com/astral-sh/ruff) [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/gerrymanoim/exchange_calendars/master.svg)](https://results.pre-commit.ci/latest/github/gerrymanoim/exchange_calendars/master)
 
 A Python library for defining and querying calendars for security exchanges.
 
